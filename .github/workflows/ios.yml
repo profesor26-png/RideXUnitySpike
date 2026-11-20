@@ -76,6 +76,14 @@ jobs:
           set -euxo pipefail
           UNITY_APP="$(ls -d "/Applications/Unity/Hub/Editor/$UNITY_VERSION/Unity.app" 2>/dev/null || find /Applications -maxdepth 6 -name "Unity.app" | head -n1)"
           mkdir -p /tmp/blank
+          echo "::group::CLI auth/license durumu"
+          "$UNITY_CLI" auth status --json 2>&1 || true
+          "$UNITY_CLI" license --json 2>&1 || true
+          echo "::endgroup::"
+          echo "::group::CLI ile personal aktivasyon"
+          "$UNITY_CLI" license activate --personal --accept-eula --non-interactive 2>&1 || true
+          "$UNITY_CLI" license --json 2>&1 || true
+          echo "::endgroup::"
           "$UNITY_APP/Contents/MacOS/Unity" \
             -batchmode -quit -nographics \
             -createProject /tmp/blank \
