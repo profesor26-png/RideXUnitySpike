@@ -79,13 +79,11 @@ jobs:
           "$UNITY_APP/Contents/MacOS/Unity" \
             -batchmode -quit -nographics \
             -createProject /tmp/blank \
-            -serial "$UNITY_SERIAL" \
             -username "$UNITY_EMAIL" \
             -password "$UNITY_PASSWORD" \
             -logFile - 2>&1 | tee unity-activate.log
           grep -i "licens" unity-activate.log | tail -n 20 || true
         env:
-          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
 
