@@ -71,19 +71,6 @@ jobs:
           ls -la /Applications/Unity/Hub/Editor/ || true
           find /Applications/Unity -maxdepth 5 -name "Unity.app" 2>/dev/null || true
 
-      - name: Lisansi yerlestir
-        run: |
-          set -euxo pipefail
-          printf '%s' "${UNITY_LICENSE}" > /tmp/unity.ulf
-          wc -c /tmp/unity.ulf
-          sudo mkdir -p "/Library/Application Support/Unity"
-          sudo cp /tmp/unity.ulf "/Library/Application Support/Unity/Unity_lic.ulf"
-          mkdir -p "$HOME/Library/Application Support/Unity"
-          cp /tmp/unity.ulf "$HOME/Library/Application Support/Unity/Unity_lic.ulf"
-          ls -la "/Library/Application Support/Unity" || true
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-
       - name: Unity lisans aktivasyonu (serial + hesap)
         run: |
           set -euxo pipefail
