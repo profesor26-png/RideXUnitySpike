@@ -55,7 +55,9 @@ jobs:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          cliVersion: v0.1.76
           unityVersion: 6000.6.10f1
           targetPlatform: iOS
           buildMethod: RideX.BuildScript.BuildiOS
