@@ -84,6 +84,24 @@ jobs:
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
 
+      - name: Unity lisans aktivasyonu (serial + hesap)
+        run: |
+          set -euxo pipefail
+          UNITY_APP="$(ls -d "/Applications/Unity/Hub/Editor/$UNITY_VERSION/Unity.app" 2>/dev/null || find /Applications -maxdepth 6 -name "Unity.app" | head -n1)"
+          mkdir -p /tmp/blank
+          "$UNITY_APP/Contents/MacOS/Unity" \
+            -batchmode -quit -nographics \
+            -createProject /tmp/blank \
+            -serial "$UNITY_SERIAL" \
+            -username "$UNITY_EMAIL" \
+            -password "$UNITY_PASSWORD" \
+            -logFile - 2>&1 | tee unity-activate.log
+          grep -i "licens" unity-activate.log | tail -n 20 || true
+        env:
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+
       - name: Unity build (iOS Xcode projesi)
         run: |
           set -euxo pipefail
@@ -146,7 +164,7 @@ jobs:
         if: failure()
         run: |
           set -x
-          for f in unity-build.log xcodebuild.log; do
+          for f in unity-activate.log unity-build.log xcodebuild.log; do
             [ -f "$f" ] || continue
             tail -n 45 "$f" | while IFS= read -r l; do
               l="${l//'%'/'%25'}"
