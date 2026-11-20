@@ -93,9 +93,14 @@ jobs:
           mkdir -p build
           "$UNITY_APP/Contents/MacOS/Unity" \
             -batchmode -quit -nographics \
+            -username "$UNITY_EMAIL" \
+            -password "$UNITY_PASSWORD" \
             -projectPath "$PWD" \
             -executeMethod RideX.BuildScript.BuildiOS \
             -logFile - 2>&1 | tee unity-build.log
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
 
       - name: Uretilen dosyalar
         if: always()
