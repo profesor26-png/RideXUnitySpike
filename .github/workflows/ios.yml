@@ -1,0 +1,138 @@
+name: Unity iOS Spike
+
+# Amac: Unity + GameCI ile IMZASIZ .ipa uretmek.
+# Bu repo RideX'ten tamamen bagimsizdir; ana projeye dokunmaz.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: unity-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Unity -> Xcode -> IPA
+    runs-on: macos-15
+    timeout-minutes: 120
+
+    steps:
+      - name: Depoyu al
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Ortam bilgisi
+        run: |
+          set -euxo pipefail
+          sw_vers || true
+          uname -m || true
+          xcodebuild -version || true
+          df -h / || true
+
+      - name: En yeni Xcode'u sec
+        run: |
+          set -euxo pipefail
+          ls -d /Applications/Xcode*.app || true
+          XCODE_APP="$(ls -d /Applications/Xcode*.app | sort -V | tail -n1)"
+          echo "secili: $XCODE_APP"
+          sudo xcode-select -s "$XCODE_APP"
+          xcodebuild -version
+
+      - name: Library cache
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-iOS-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-iOS-
+
+      - name: Unity build (GameCI)
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: 6000.6.10f1
+          targetPlatform: iOS
+          buildMethod: RideX.BuildScript.BuildiOS
+          allowDirtyBuild: true
+          cacheUnityInstallationOnMac: true
+
+      - name: Uretilen dosyalar
+        if: always()
+        run: |
+          set -x
+          ls -la || true
+          find build -maxdepth 3 -type d 2>/dev/null | sort | head -n 50 || true
+
+      - name: Xcode derle (imzasiz)
+        run: |
+          set -euxo pipefail
+          XCPROJ="$(find build -name "*.xcodeproj" -maxdepth 4 | head -n1)"
+          echo "xcodeproj: $XCPROJ"
+          test -n "$XCPROJ"
+          SCHEME="$(basename "$XCPROJ" .xcodeproj)"
+          echo "scheme: $SCHEME"
+          xcodebuild \
+            -project "$XCPROJ" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath build/dd \
+            -resultBundlePath build/xcodebuild.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            build 2>&1 | tee xcodebuild.log
+
+      - name: IPA paketle
+        run: |
+          set -euxo pipefail
+          APP="$(find build/dd -name "*.app" -maxdepth 6 | head -n1)"
+          echo "app: $APP"
+          test -n "$APP"
+          rm -rf build/payload
+          mkdir -p build/payload/Payload
+          cp -R "$APP" build/payload/Payload/
+          ( cd build/payload && zip -qry ../RideXSpike-unsigned.ipa Payload )
+          ls -lh build/RideXSpike-unsigned.ipa
+          unzip -l build/RideXSpike-unsigned.ipa | head -n 20
+
+      - name: Hata detayi (annotation)
+        if: failure()
+        run: |
+          set -x
+          for f in xcodebuild.log; do
+            [ -f "$f" ] || continue
+            tail -n 45 "$f" | while IFS= read -r l; do
+              l="${l//'%'/'%25'}"
+              echo "::error file=$f::$l"
+            done
+          done
+
+      - name: Loglari yukle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-build-logs
+          path: |
+            xcodebuild.log
+            build/xcodebuild.xcresult
+            Logs/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: IPA yukle
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-ipa-unsigned
+          path: build/RideXSpike-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30
