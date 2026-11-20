@@ -50,11 +50,15 @@ jobs:
           curl -fsSL https://unity.com/install.sh -o /tmp/unity-install.sh
           bash /tmp/unity-install.sh
           echo "::endgroup::"
+          ls -la "$HOME/.local/bin" "$HOME/.unity/bin" "/usr/local/bin/unity" 2>/dev/null || true
+          # shellcheck disable=SC1090
+          source "$HOME/.bashrc" 2>/dev/null || true
           UNITY_CLI="$(command -v unity || true)"
           if [ -z "$UNITY_CLI" ]; then
-            UNITY_CLI="$(find "$HOME/.local" /usr/local/bin -maxdepth 4 -type f -name unity 2>/dev/null | head -n1)"
+            UNITY_CLI="$(find "$HOME" -maxdepth 6 -type f -name unity -perm -u+x 2>/dev/null | head -n1)"
           fi
           echo "CLI: $UNITY_CLI"
+          test -n "$UNITY_CLI"
           echo "UNITY_CLI=$UNITY_CLI" >> "$GITHUB_ENV"
           "$UNITY_CLI" --version
 
